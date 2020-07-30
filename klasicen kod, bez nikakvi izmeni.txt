@@ -1,0 +1,155 @@
+import csv
+import numpy as np
+import pandas as pd
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras import utils as np_utils
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import classification_report, confusion_matrix
+from tensorflow.keras.callbacks import EarlyStopping
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+
+
+def plot_graph_loss(file_name, model_name):
+    """ Plots validation and train loss
+    :param file_name: name of the csv file containing values for validation and train loss functions
+    :type file_name: str
+    :param model_name: name of the model
+    :type model_name: str
+    :return: None
+    """
+    values = pd.read_table(file_name, sep=',')
+    print(values)
+    data = pd.DataFrame()
+    data['epoch'] = list(values['epoch'].get_values() + 1) + list(values['epoch'].get_values() + 1)
+    data['loss name'] = ['training'] * len(values) + ['validation'] * len(values)
+    data['loss'] = list(values['loss'].get_values()) + list(values['val_loss'].get_values())
+    sns.set(style='darkgrid', context='poster', font='Verdana')
+    f, ax = plt.subplots()
+    sns.lineplot(x='epoch', y='loss', hue='loss name', style='loss name', dashes=False, data=data, palette='Set2')
+    ax.set_ylabel('Loss')
+    ax.set_xlabel('Epoch')
+    ax.legend().texts[0].set_text('')
+    plt.title(model_name)
+    plt.show()
+def read_dataset(file_path):
+    """ Read the dataset and return the features and encoded classes
+    :param file_path: path to the file that contains the dataset
+    :type file_path: str
+    :return: features and encoded classes
+    :rtype: np.array, np.array
+    """
+    features = []
+    classes = []
+    with open(file_path) as f:
+        _ = f.readline()
+        while True:
+            line = f.readline().strip()
+            if line == '':
+                break
+            parts = line.split(';')
+            features.append(list(map(float, parts[:-1])))
+            classes.append(one_hot_encoding(int(parts[-1])))
+    return np.array(features), np.array(classes)
+
+
+def one_hot_encoding(sample):
+    """ Encodes the ranking into class (with one-hot encoding)
+    bad quality -> [1, 0, 0]
+    medium quality -> [0, 1, 0]
+    good quality -> [0, 0, 1]
+    :param sample: one ranking value
+    :type sample: int
+    :return: one-hot encoded class
+    :rtype: list(int)
+    """
+    if sample < 6:
+        return [1, 0, 0]
+    elif sample == 6:
+        return [0, 1, 0]
+    else:
+        return [0, 0, 1]
+def write_loss_function(file_path, model, xv, yv, xt, yt): #funkcija za zapisuvanje vrednosti na funkcija na zaguba vo csv datoteka, vo edna redica za validacisko mnozestvo, vo druga redica za testiracko mnozestvo
+    with open(file_path, "w") as f:
+      writer=csv.writer(f)
+      strings_val=[str(x) for x in model.evaluate(xv,yv,batch_size=32,verbose=1)]
+      strings_test=[str(x) for x in model.evaluate(xt,yt,batch_size=32,verbose=1)]
+      attributes=['epoch','loss','val_loss']
+      str1=','.join(strings_val)
+      str2=','.join(strings_test)
+      attr=','.join(attributes)
+      writer.writerow([attr,])
+      writer.writerow([str1,])
+      writer.writerow([str2,])
+if __name__ == "__main__":
+  dataset_x,dataset_y=read_dataset("/content/drive/My Drive/winequality-white.csv")
+  list1,list2,list3,list4,list5,list6,list7,list8,list9=[],[],[],[],[],[],[],[],[]
+  #vo listite list7, list8 i list9 ke gi cuvame vrednostite na klasnite atributi, i toa za vrednost [1,0,0] stavame 0, za vrednost [0,1,0] stavame 1, a za vrednost [0,0,1] stavame 2
+  for i in range(len(dataset_x)):
+    if(dataset_y[i][0]==1):
+      list1.append(dataset_x[i])
+      list4.append(dataset_y[i])
+      list7.append(0)
+    if(dataset_y[i][1]==1):
+      list2.append(dataset_x[i])
+      list5.append(dataset_y[i])
+      list8.append(1)
+    if(dataset_y[i][2]==1):
+      list3.append(dataset_x[i])
+      list6.append(dataset_y[i])
+      list9.append(2)
+  train_x=list1[:int(0.7*len(list1))]+list2[:int(0.7*len(list2))]+list3[:int(0.7*len(list3))]
+  val_x=list1[int(0.7*len(list1)):int(0.8*len(list1))]+list2[int(0.7*len(list2)):int(0.8*len(list2))]+list3[int(0.7*len(list3)):int(0.8*len(list3))]
+  test_x=list1[int(0.8*len(list1)):]+list2[int(0.8*len(list2)):]+list3[int(0.8*len(list3)):]
+  train_y=list4[:int(0.7*len(list4))]+list5[:int(0.7*len(list5))]+list6[:int(0.7*len(list6))]
+  train_y_nothot=list7[:int(0.7*len(list7))]+list8[:int(0.7*len(list8))]+list9[:int(0.7*len(list9))]
+  val_y=list4[int(0.7*len(list4)):int(0.8*len(list4))]+list5[int(0.7*len(list5)):int(0.8*len(list5))]+list6[int(0.7*len(list6)):int(0.8*len(list6))]
+  val_y_nothot=list7[int(0.7*len(list7)):int(0.8*len(list7))]+list8[int(0.7*len(list8)):int(0.8*len(list8))]+list9[int(0.7*len(list9)):int(0.8*len(list9))]
+  test_y=list4[int(0.8*len(list4)):]+list5[int(0.8*len(list5)):]+list6[int(0.8*len(list6)):]
+  test_y_nothot=list7[int(0.8*len(list7)):]+list8[int(0.8*len(list8)):]+list9[int(0.8*len(list9)):]
+  train_x=np.asarray(train_x)
+  val_x=np.asarray(val_x)
+  test_x=np.asarray(test_x)
+  train_y=np.asarray(train_y)
+  val_y=np.asarray(val_y)
+  test_y=np.asarray(test_y)
+  scaler=MinMaxScaler(feature_range=(0,1))
+  scaler.fit(train_x)
+  train_x=scaler.transform(train_x)
+  val_x=scaler.transform(val_x)
+  test_x=scaler.transform(test_x)
+  train_y_nothot=np.asarray(train_y_nothot)
+  val_y_nothot=np.asarray(val_y_nothot)
+  test_y_nothot=np.asarray(test_y_nothot)
+  model=Sequential()
+  model.add(Dense(12, activation='relu', input_shape=(11,)))
+  model.add(Dense(64, activation='tanh'))
+  model.add(Dense(32, activation='elu'))
+  model.add(Dense(16, activation='relu'))
+  model.add(Dense(3, activation='sigmoid'))
+  model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+  es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=20)
+  model.fit(train_x, train_y, batch_size=32, epochs=30, verbose=1, callbacks=[es])
+  val_y_predicted=model.predict(val_x, batch_size=32, verbose=1)
+  test_y_predicted=model.predict(test_x, batch_size=32, verbose=1)
+  val_y_predicted=np.argmax(val_y_predicted, axis=1)
+  test_y_predicted=np.argmax(test_y_predicted, axis=1)
+  print(classification_report(val_y_nothot,val_y_predicted))
+  print(classification_report(test_y_nothot,test_y_predicted))
+  model.save("/content/drive/My Drive/wine_model.h5")
+  model.save_weights("/content/drive/My Drive/wine_model_weights.h5")
+  write_loss_function("/content/drive/My Drive/Loss-function-values-classic.csv", model, val_x, val_y, test_x, test_y)
+  plot_graph_loss("/content/drive/My Drive/Loss-function-values-classic.csv", model)
+  labels=val_y_nothot
+  outputs=val_y_predicted
+  cm=confusion_matrix(labels,outputs)
+  names = ['0', '1', '2']
+  cm = 100 * cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+  df = pd.DataFrame(data=cm, columns=names, index=names)
+  g = sns.heatmap(df, annot=True, fmt=".1f", linewidths=.5, vmin=0, vmax=100, cmap='Greens')
+  g.set_title('Confusion matrix')
+  g.set_ylabel('True label')
+  g.set_xlabel('Predicted label')
+  g.plot()
